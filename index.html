@@ -24,6 +24,9 @@
     }).addTo(map);
 
     const markers = L.markerClusterGroup({
+      spiderfyOnMaxZoom: false,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: false,
       iconCreateFunction: function (cluster) {
         const childMarkers = cluster.getAllChildMarkers();
         const firstImage = childMarkers.length > 0
@@ -46,6 +49,18 @@
           className: '',
           iconSize: [80, 80]
         });
+      }
+    });
+
+    markers.on('clusterclick', function (a) {
+      const childMarkers = a.layer.getAllChildMarkers();
+      const images = childMarkers.map(m => {
+        const match = m.getPopup().getContent().match(/<img src="([^"]+)"/);
+        return match ? match[1] : null;
+      }).filter(Boolean);
+
+      if (images.length > 0) {
+        showImageGallery(images);
       }
     });
 
@@ -74,6 +89,56 @@
         }, 100);
         map.addLayer(markers);
       });
+  </script>
+
+  <div id="gallery-modal" style="display: none; position: fixed; z-index: 1000; top: 10%; left: 50%; transform: translateX(-50%); background: white; padding: 20px; box-shadow: 0 0 10px #333;">
+    <div id="main-image" style="text-align: center;">
+      <img src="" id="gallery-main" style="max-width: 600px; max-height: 400px;">
+    </div>
+    <div id="thumbnails" style="margin-top: 10px; display: flex; overflow-x: auto; gap: 10px;"></div>
+    <div style="margin-top: 10px; text-align: center;">
+      <button onclick="prevImage()">上一张</button>
+      <button onclick="nextImage()">下一张</button>
+      <button onclick="closeGallery()">关闭</button>
+    </div>
+  </div>
+  <script>
+    let galleryImages = [];
+    let currentIndex = 0;
+
+    function showImageGallery(images) {
+      galleryImages = images;
+      currentIndex = 0;
+      updateGallery();
+      document.getElementById('gallery-modal').style.display = 'block';
+    }
+
+    function updateGallery() {
+      document.getElementById('gallery-main').src = galleryImages[currentIndex];
+      const thumbs = document.getElementById('thumbnails');
+      thumbs.innerHTML = galleryImages.map((src, i) => 
+        `<img src="${src}" style="height: 60px; cursor: pointer; border: ${i === currentIndex ? '2px solid blue' : '1px solid gray'}" onclick="goToImage(${i})">`
+      ).join('');
+    }
+
+    function nextImage() {
+      currentIndex = (currentIndex + 1) % galleryImages.length;
+      updateGallery();
+    }
+
+    function prevImage() {
+      currentIndex = (currentIndex - 1 + galleryImages.length) % galleryImages.length;
+      updateGallery();
+    }
+
+    function goToImage(i) {
+      currentIndex = i;
+      updateGallery();
+    }
+
+    function closeGallery() {
+      document.getElementById('gallery-modal').style.display = 'none';
+    }
   </script>
 </body>
 </html>
