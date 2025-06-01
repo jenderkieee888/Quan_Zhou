@@ -7,6 +7,108 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
     #map { height: 100vh; }
+    .gallery-bubble {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 24px;
+      box-sizing: border-box;
+      overflow: hidden;
+      text-align: center;
+    }
+
+    .gallery-bubble::after, .gallery-arrow {
+      content: "";
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 10px 10px 0 10px;
+      border-style: solid;
+      border-color: white transparent transparent transparent;
+      z-index: 1001;
+    }
+
+    #main-container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .gallery-caption {
+      width: 100%;
+      padding: 12px 0;
+      background: none;
+      color: white;
+      font-size: 17px;
+      font-weight: 500;
+      text-align: center;
+    }
+
+    #gallery-main {
+      max-width: 80vw;
+      max-height: 80vh;
+      border-radius: 12px;
+    }
+    #close-gallery {
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      background: rgba(255,255,255,0.8);
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 0 10px;
+      line-height: 36px;
+      height: 36px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      z-index: 2000;
+    }
+
+    #thumbnails {
+      margin-top: 10px;
+      display: flex;
+      overflow-x: auto;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    #thumbnails img {
+      height: 60px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      border-radius: 6px;
+    }
+
+    #thumbnails img.active {
+      border-color: #007aff;
+    }
+
+    #prev-arrow, #next-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 28px;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 50%;
+      background-color: rgba(255,255,255,0.8);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      cursor: pointer;
+    }
+    #prev-arrow {
+      left: 20px;
+    }
+    #next-arrow {
+      right: 20px;
+    }
   </style>
 </head>
 <body>
@@ -39,12 +141,18 @@
 
         return L.divIcon({
           html: firstImage
-            ? `<div style="position: relative; width: 80px; height: 80px; overflow: hidden; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.4);">
-                 <img src="${firstImage}" style="width: 100%; height: 100%; object-fit: cover;">
-                 <div style="position: absolute; bottom: 2px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 12px; padding: 1px 5px; border-radius: 8px;">
-                   ${childMarkers.length}
-                 </div>
-               </div>`
+            ? `<div style="position: relative; width: 80px; height: 80px; overflow: visible; border: 2px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border-radius: 12px;">
+                <div style="width: 100%; height: 100%; overflow: hidden; border-radius: 12px;">
+                  <img src="${firstImage}" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <div style="position: absolute; bottom: 6px; left: 8px; color: white; font-size: 14px; font-weight: bold;">
+                  ${childMarkers.length}
+                </div>
+                <div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+                            width: 0; height: 0; border-left: 8px solid transparent;
+                            border-right: 8px solid transparent; border-top: 10px solid white;">
+                </div>
+              </div>`
             : `<div style="width: 80px; height: 80px; background: gray;"></div>`,
           className: '',
           iconSize: [80, 80]
@@ -75,8 +183,14 @@
             <img src="${item.image_path}" width="200">
           `;
           const icon = L.divIcon({
-            html: `<div style="width: 80px; height: 80px; overflow: hidden; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.4);">
-                     <img src="${item.image_path}" style="width: 100%; height: 100%; object-fit: cover;">
+            html: `<div style="position: relative; width: 80px; height: 80px; overflow: visible; border: 2px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border-radius: 12px;">
+                     <div style="width: 100%; height: 100%; overflow: hidden; border-radius: 12px;">
+                       <img src="${item.image_path}" style="width: 100%; height: 100%; object-fit: cover;">
+                     </div>
+                     <div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+                                 width: 0; height: 0; border-left: 8px solid transparent;
+                                 border-right: 8px solid transparent; border-top: 10px solid white;">
+                     </div>
                    </div>`,
             className: '',
             iconSize: [80, 80]
@@ -98,17 +212,16 @@
       });
   </script>
 
-  <div id="gallery-modal" style="display: none; position: fixed; z-index: 1000; top: 10%; left: 50%; transform: translateX(-50%); background: white; padding: 20px; box-shadow: 0 0 10px #333;">
-    <div id="caption" style="text-align: center; margin-bottom: 8px; font-size: 16px; color: #333;"></div>
-    <div id="main-image" style="text-align: center;">
-      <img src="" id="gallery-main" style="max-width: 600px; max-height: 400px;">
+  <div id="gallery-modal" class="gallery-bubble" style="position:fixed;">
+    <button id="close-gallery" onclick="closeGallery()">×</button>
+    <div id="caption" class="gallery-caption"></div>
+    <div class="gallery-arrow"></div>
+    <div id="main-container">
+      <div id="main-image"><img src="" id="gallery-main"></div>
     </div>
-    <div id="thumbnails" style="margin-top: 10px; display: flex; overflow-x: auto; gap: 10px;"></div>
-    <div style="margin-top: 10px; text-align: center;">
-      <button onclick="prevImage()">上一张</button>
-      <button onclick="nextImage()">下一张</button>
-      <button onclick="closeGallery()">关闭</button>
-    </div>
+    <button id="prev-arrow" onclick="prevImage()">←</button>
+    <button id="next-arrow" onclick="nextImage()">→</button>
+    <div id="thumbnails"></div>
   </div>
   <script>
     let galleryImages = [];
@@ -127,7 +240,7 @@
       document.getElementById('caption').innerText = current.caption || '';
       const thumbs = document.getElementById('thumbnails');
       thumbs.innerHTML = galleryImages.map((img, i) =>
-        `<img src="${img.src}" style="height: 60px; cursor: pointer; border: ${i === currentIndex ? '2px solid blue' : '1px solid gray'}" onclick="goToImage(${i})">`
+        `<img src="${img.src}" class="${i === currentIndex ? 'active' : ''}" onclick="goToImage(${i})">`
       ).join('');
     }
 
