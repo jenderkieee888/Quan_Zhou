@@ -55,8 +55,10 @@
     markers.on('clusterclick', function (a) {
       const childMarkers = a.layer.getAllChildMarkers();
       const images = childMarkers.map(m => {
-        const match = m.getPopup().getContent().match(/<img src="([^"]+)"/);
-        return match ? match[1] : null;
+        const popupContent = m.getPopup().getContent();
+        const match = popupContent.match(/<img src="([^"]+)"/);
+        const captionMatch = popupContent.match(/<h3>(.*?)<\/h3>/);
+        return match ? { src: match[1], caption: captionMatch ? captionMatch[1] : '' } : null;
       }).filter(Boolean);
 
       if (images.length > 0) {
@@ -79,7 +81,12 @@
             className: '',
             iconSize: [80, 80]
           });
-          const marker = L.marker([item.lat, item.lng], { icon }).bindPopup(popup);
+          const marker = L.marker([item.lat, item.lng], { icon }); // 不再 .bindPopup(popup)
+          marker.getPopup = () => ({ getContent: () => popup });  // 为 cluster 提供 getPopup() 伪接口
+          marker.on('click', () => {
+            map.setView([item.lat, item.lng], map.getZoom(), { animate: true });
+            showImageGallery([{ src: item.image_path, caption: item.query }]);
+          });
           markers.addLayer(marker);
         });
         setTimeout(() => {
@@ -92,6 +99,7 @@
   </script>
 
   <div id="gallery-modal" style="display: none; position: fixed; z-index: 1000; top: 10%; left: 50%; transform: translateX(-50%); background: white; padding: 20px; box-shadow: 0 0 10px #333;">
+    <div id="caption" style="text-align: center; margin-bottom: 8px; font-size: 16px; color: #333;"></div>
     <div id="main-image" style="text-align: center;">
       <img src="" id="gallery-main" style="max-width: 600px; max-height: 400px;">
     </div>
@@ -106,18 +114,20 @@
     let galleryImages = [];
     let currentIndex = 0;
 
-    function showImageGallery(images) {
-      galleryImages = images;
+    function showImageGallery(imageObjs) {
+      galleryImages = imageObjs;
       currentIndex = 0;
       updateGallery();
       document.getElementById('gallery-modal').style.display = 'block';
     }
 
     function updateGallery() {
-      document.getElementById('gallery-main').src = galleryImages[currentIndex];
+      const current = galleryImages[currentIndex];
+      document.getElementById('gallery-main').src = current.src;
+      document.getElementById('caption').innerText = current.caption || '';
       const thumbs = document.getElementById('thumbnails');
-      thumbs.innerHTML = galleryImages.map((src, i) => 
-        `<img src="${src}" style="height: 60px; cursor: pointer; border: ${i === currentIndex ? '2px solid blue' : '1px solid gray'}" onclick="goToImage(${i})">`
+      thumbs.innerHTML = galleryImages.map((img, i) =>
+        `<img src="${img.src}" style="height: 60px; cursor: pointer; border: ${i === currentIndex ? '2px solid blue' : '1px solid gray'}" onclick="goToImage(${i})">`
       ).join('');
     }
 
