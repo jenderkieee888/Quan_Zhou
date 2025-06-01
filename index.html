@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>泉州拍照打卡</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map { height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+  <script>
+    const map = L.map('map').setView([35.6895, 139.6917], 5);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    const markers = L.markerClusterGroup({
+      iconCreateFunction: function (cluster) {
+        const childMarkers = cluster.getAllChildMarkers();
+        const firstImage = childMarkers.length > 0
+          ? (childMarkers[0].getPopup().getContent().match(/<img src="([^"]+)"/) || [])[1]
+          : null;
+
+        if (childMarkers.length === 1) {
+          return null;
+        }
+
+        return L.divIcon({
+          html: firstImage
+            ? `<div style="position: relative; width: 80px; height: 80px; overflow: hidden; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.4);">
+                 <img src="${firstImage}" style="width: 100%; height: 100%; object-fit: cover;">
+                 <div style="position: absolute; bottom: 2px; right: 4px; background: rgba(0,0,0,0.6); color: white; font-size: 12px; padding: 1px 5px; border-radius: 8px;">
+                   ${childMarkers.length}
+                 </div>
+               </div>`
+            : `<div style="width: 80px; height: 80px; background: gray;"></div>`,
+          className: '',
+          iconSize: [80, 80]
+        });
+      }
+    });
+
+    fetch("all_image_positions.json")
+      .then(res => res.json())
+      .then(data => {
+        data.forEach(item => {
+          const popup = `
+            <h3>${item.query}</h3>
+            <img src="${item.image_path}" width="200">
+          `;
+          const icon = L.divIcon({
+            html: `<div style="width: 80px; height: 80px; overflow: hidden; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.4);">
+                     <img src="${item.image_path}" style="width: 100%; height: 100%; object-fit: cover;">
+                   </div>`,
+            className: '',
+            iconSize: [80, 80]
+          });
+          const marker = L.marker([item.lat, item.lng], { icon }).bindPopup(popup);
+          markers.addLayer(marker);
+        });
+        setTimeout(() => {
+          if (markers.getLayers().length > 0) {
+            map.fitBounds(markers.getBounds());
+          }
+        }, 100);
+        map.addLayer(markers);
+      });
+  </script>
+</body>
+</html>
