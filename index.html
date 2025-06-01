@@ -174,13 +174,9 @@
       }
     });
 
-    // 通过 jsDelivr 加速加载 JSON
-    fetch("https://cdn.jsdelivr.net/gh/xiong-boning/quan-z@main/all_image_positions.json")
+    fetch("all_image_positions.json")
       .then(res => res.json())
       .then(data => {
-        // 将相对图片路径换成 jsDelivr CDN 绝对地址
-        const cdnBase = "https://cdn.jsdelivr.net/gh/xiong-boning/quan-z@main/";
-        data = data.map(item => ({ ...item, image_path: cdnBase + item.image_path }));
         data.forEach(item => {
           const popup = `
             <h3>${item.query}</h3>
